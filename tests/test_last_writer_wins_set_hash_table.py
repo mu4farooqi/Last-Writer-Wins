@@ -104,7 +104,7 @@ def test_lww_set_exists(lww_set_object):
 
 def test_lww_set_get(lww_set_object):
     """
-    This test will test either an element exists in Element set or not
+    This test will test `get` operation which gets all elements in element set
     """
 
     # Add a new element in set with default current utc timestamp
