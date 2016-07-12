@@ -11,11 +11,10 @@ from element_set import LastWriterWinsSet
 ELEMENT = ''.join([choice(string.ascii_letters + string.digits) for n in xrange(5)])
 
 
-@pytest.fixture(scope="module")
-def lww_set_object(request):
+@pytest.fixture()
+def lww_set_object():
     """
     This fixture will create a LastWriterWinsSet object which will be shared by all tests in this module.
-    :param request: Requesting context of this fixture
     :return:
     """
     set_object = LastWriterWinsSet()
@@ -80,5 +79,45 @@ def test_lww_set_remove(lww_set_object):
     lww_set_object.remove(ELEMENT, (current_time_stamp_of_element + timedelta(days=1)).isoformat())
     assert isinstance(lww_set_object.remove_set[ELEMENT], datetime)
     assert lww_set_object.remove_set[ELEMENT] > current_time_stamp_of_element
+
+
+def test_lww_set_exists(lww_set_object):
+    """
+    This test will test either an element exists in Element set or not
+    """
+
+    # Add a new element in set with default current utc timestamp
+    lww_set_object.add(ELEMENT)
+    assert lww_set_object.exists(ELEMENT)
+
+    # Remove an existing element from set with old utc timestamp
+    lww_set_object.remove(ELEMENT, (datetime.utcnow() - timedelta(days=1)).isoformat())
+    assert lww_set_object.exists(ELEMENT)
+
+    # Remove an existing element from set default current utc timestamp
+    lww_set_object.remove(ELEMENT)
+    assert not lww_set_object.exists(ELEMENT)
+
+    # If element doesn't exist at all in Element set
+    assert not lww_set_object.exists(ELEMENT + 'TEMP')
+
+
+def test_lww_set_get(lww_set_object):
+    """
+    This test will test either an element exists in Element set or not
+    """
+
+    # Add a new element in set with default current utc timestamp
+    lww_set_object.add(ELEMENT)
+    assert [ELEMENT] == lww_set_object.get()
+
+    # Remove an existing element from set with old utc timestamp
+    lww_set_object.remove(ELEMENT, (datetime.utcnow() - timedelta(days=1)).isoformat())
+    assert [ELEMENT] == lww_set_object.get()
+
+    # Remove an existing element from set default current utc timestamp
+    lww_set_object.remove(ELEMENT)
+    assert not lww_set_object.get()  # Is Empty ?
+
 
 
