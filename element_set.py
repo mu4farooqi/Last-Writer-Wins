@@ -53,6 +53,7 @@ class LastWriterWinsSet(object):
             timestamp = parse(timestamp)
         except ValueError as exception:
             logging.error('Unable to parse time stamps %s because of an exception: %s', timestamp, exception.message)
+            return
 
         if element not in self.add_set or self.add_set[element] < timestamp:
             self.add_set[element] = timestamp
@@ -80,6 +81,7 @@ class LastWriterWinsSet(object):
             timestamp = parse(timestamp)
         except ValueError as exception:
             logging.error('Unable to parse time stamps %s because of an exception: %s', timestamp, exception.message)
+            return
 
         if element not in self.remove_set or self.remove_set[element] < timestamp:
             self.remove_set[element] = timestamp
