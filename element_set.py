@@ -85,3 +85,36 @@ class LastWriterWinsSet(object):
 
         if element not in self.remove_set or self.remove_set[element] < timestamp:
             self.remove_set[element] = timestamp
+
+    def exists(self, element):
+        """
+        This method will determine either given element is in Element set or not according to following conditions:
+
+            --> If element is present in add_set but not in remove_set then return True
+            --> If element is not present in add_set then return False
+            --> If element is present in both add_set and remove_set and timestamp of add_set is more recent then True
+
+            Note: I'm assuming timestamps of an element in add_set and remove_set couldn't be same but if they are same
+            this method will still return False as timestamp of element in add_set is not more recent
+        :param object element: Value of element
+        :return: Boolean variable indicating either element is present or not
+        :rtype: bool
+        """
+        if element in self.add_set and (element
+                                        not in self.remove_set or self.add_set[element] > self.remove_set[element]):
+            return True
+        return False
+
+    def get(self):
+        """
+        This method will return all elements in element set. An element will be in return list if:
+
+            --> If element is present in add_set but not in remove_set
+            --> If element is present in both add_set and remove_set and timestamp of add_set is more recent
+        :return: List of all elements in Element Set
+        :rtype: list
+        """
+        elements_of_add_set_not_in_remove_set = list(set(self.add_set.keys()) - set(self.remove_set.keys()))
+        common_elements_of_add_and_remove_set = list(set(self.add_set.keys()).intersection(set(self.remove_set.keys())))
+        return elements_of_add_set_not_in_remove_set + filter(
+                lambda element: self.add_set[element] > self.remove_set[element], common_elements_of_add_and_remove_set)
