@@ -1,10 +1,71 @@
 """
-Implementation of Last-Writer-Wins (LWW) Element Set using dict(HashTable) in Python
+Implementation of Last-Writer-Wins (LWW) Element Set using ZSET(Redis) in Python
 """
 
+import redis
+import string
 import logging
+from random import choice
 from dateutil.parser import parse
 from datetime import datetime
+
+
+class ZSet(dict):
+    """
+    ZSet class acts same like python dictionary(dict). Only difference is that in ZSet class our data is stored in
+    Redis' ZSET structure
+    """
+    def __init__(self, redis_instance):
+        """
+        This method will initialize ZSet class using given redis_instance and will create a unique key for ZSET
+        :param redis_instance: Instance of StrictRedis
+        :return: ZSet object
+        :rtype: ZSet
+        """
+        super(ZSet, self).__init__()
+        self.redis_instance = redis_instance
+        self.set_key = ''.join([choice(string.ascii_letters + string.digits) for n in xrange(5)])
+
+    def __setitem__(self, element, timestamp):
+        """
+        This method is equivalent to `self[element] = timestamp`
+        :param str element: Value of Element
+        :param datetime timestamp: DateTime string of Timestamp
+        :return:
+        """
+        assert isinstance(timestamp, datetime)
+        assert isinstance(element, basestring)
+
+        # Total number of seconds relative to epoch time
+        total_number_of_seconds = (timestamp - datetime(1970, 1, 1)).total_seconds()
+        self.redis_instance.zadd(self.set_key, total_number_of_seconds, element)
+
+    def __getitem__(self, element):
+        """
+        This method is equivalent to `self[element]`
+        :param str element: Value of Element
+        :return: Timestamp of Element
+        :rtype: datetime
+        """
+        timestamp = self.redis_instance.zscore(self.set_key, element)
+        return datetime.fromtimestamp(timestamp) if timestamp else None
+
+    def __contains__(self, element):
+        """
+        This method is equivalent to `element in self`
+        :param str element: Value of Element
+        :return: True|False
+        :rtype: bool
+        """
+        return True if self[element] else False
+
+    def keys(self):
+        """
+        This method will return all elements in ZSet
+        :return: List of elements in ZSet
+        :rtype: list
+        """
+        return self.redis_instance.zrange(self.set_key, 0, -1)
 
 
 class LastWriterWinsSet(object):
@@ -22,14 +83,14 @@ class LastWriterWinsSet(object):
     """
     def __init__(self):
         """
-        This method will initialize a last writer wins element set. We are using dict() for our implementation
-        which is implementation of Hashtable for Python. Access time for dict(Hashtable) is certainly constant
-        i.e. O(1)
+        This method will initialize a last writer wins element set. We are using redis sorted set i.e. ZSet()
+        for our implementation
         :return: Instance of LastWriterWinsSet object
         :rtype: LastWriterWinsSet
         """
-        self.add_set = dict()
-        self.remove_set = dict()
+        redis_instance = redis.StrictRedis(host='localhost', port=6379, db=0)
+        self.add_set = ZSet(redis_instance)
+        self.remove_set = ZSet(redis_instance)
 
     def add(self, element, timestamp=datetime.utcnow().isoformat()):
         """
@@ -40,7 +101,7 @@ class LastWriterWinsSet(object):
             --> If element doesn't exits in add_set then we'll simply add element to the add_set with its
                 timestamp.
 
-        :param object element: Value of element which is to be added in add_set
+        :param str element: Value of element which is to be added in add_set
         :param str timestamp: DateTime string of Timestamp (Preferably in isoformat but not necessary).
         If nothing is provided then current utc datetime value would be used
         :return: None
@@ -68,7 +129,7 @@ class LastWriterWinsSet(object):
             --> If element doesn't exits in remove_set then we'll simply add element to the remove_set with its
                 timestamp.
 
-        :param object element: Value of element which is to be added in remove_set
+        :param str element: Value of element which is to be added in remove_set
         :param str timestamp: DateTime string of Timestamp (Preferably in isoformat but not necessary).
         If nothing is provided then current utc datetime value would be used
         :return: None
@@ -96,7 +157,7 @@ class LastWriterWinsSet(object):
 
             Note: I'm assuming timestamps of an element in add_set and remove_set couldn't be same but if they are same
             this method will still return False as timestamp of element in add_set is not more recent
-        :param object element: Value of element
+        :param str element: Value of element
         :return: Boolean variable indicating either element is present or not
         :rtype: bool
         """
